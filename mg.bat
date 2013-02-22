@@ -31,6 +31,7 @@ echo - COMMAND: local [default], test, run, help
 echo - PACKAGE: Go package name, default: "."
 echo.
 echo Copies contents of current dir to fake GOPATH, then runs 'go' there.
+echo When copying, directories starting with underscore "_" are skipped.
 echo.
 echo NOTE: You can put additional files with options in current dir:
 echo - 'goroot.txt' - contents will be put in GOROOT variable,
