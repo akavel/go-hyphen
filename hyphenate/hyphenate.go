@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	//"fmt" // DEBUG
 	"io"
 )
 
@@ -105,6 +106,9 @@ func Parse(r io.Reader) (*Hyphenations, error) {
 	state := _Nothing
 	for {
 		line, prefix, err := b.ReadLine()
+		if state == _Nothing && err == io.EOF {
+			return h, nil
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -147,8 +151,10 @@ func Parse(r io.Reader) (*Hyphenations, error) {
 				}
 				word = append(word, line[i])
 			}
+			points = append(points, 0)
 			h.Exceptions[string(word)] = points
+			//fmt.Println(string(word), points) // DEBUG
 		}
 	}
-	return h, nil
+	panic("not reached")
 }
