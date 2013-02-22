@@ -13,7 +13,7 @@ import (
 )
 
 type Tree struct {
-	Map    map[byte]Tree
+	Map    map[byte]*Tree
 	Points []int
 }
 
@@ -55,7 +55,7 @@ func Word(word []byte, h Hyphenations) [][]byte {
 
 		points = make([]int, len(work)+1)
 		for i := range work {
-			t := h.Tree
+			t := &h.Tree
 			for _, c := range work[i:] {
 				tmp, ok := t.Map[c]
 				if !ok {
@@ -101,6 +101,7 @@ const (
 func Parse(r io.Reader) (*Hyphenations, error) {
 	b := bufio.NewReader(r)
 	h := &Hyphenations{
+		Tree:       Tree{Map: make(map[byte]*Tree)},
 		Exceptions: make(map[string][]int),
 	}
 	state := _Nothing
@@ -138,7 +139,51 @@ func Parse(r io.Reader) (*Hyphenations, error) {
 
 		switch state {
 		case _Patterns:
+			// Convert the a pattern like 'a1bc3d4' into a string of chars 'abcd'
+			// and a list of points [0, 1, 0, 3, 4].
+			//
+			// Insert the pattern into the tree.  Each character finds a dict
+			// another level down in the tree, and leaf nodes have the list of
+			// points.
+			t := &h.Tree
+			points := []int{}
+			for i := 0; i < len(line); i++ {
+				c := line[i]
+				if c >= '0' && c <= '9' {
+					points = append(points, int(c-'0')) // TODO: can these be multidigit? if yes, oops
+					i++
+					if i == len(line) {
+						break
+					}
+					c = line[i]
+				} else {
+					points = append(points, 0)
+				}
 
+				_, ok := t.Map[c]
+				if !ok {
+					t.Map[c] = &Tree{Map: make(map[byte]*Tree)}
+				}
+				t = t.Map[c]
+			}
+			if c := line[len(line)-1]; c < '0' || c > '9' {
+				points = append(points, 0)
+			}
+			t.Points = points
+			/*
+				chars = re.sub('[0-9]', '', pattern)
+				points = [ int(d or 0) for d in re.split("[.a-z]", pattern) ]
+
+				# Insert the pattern into the tree.  Each character finds a dict
+				# another level down in the tree, and leaf nodes have the list of
+				# points.
+				t = self.tree
+				for c in chars:
+					if c not in t:
+						t[c] = {}
+					t = t[c]
+				t[None] = points
+			*/
 		case _Exceptions:
 			points := make([]int, 1, len(line)+2)
 			word := make([]byte, 0, len(line))
