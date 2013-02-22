@@ -1,2 +1,8 @@
 syntax: regexp
 ^tmp/
+^_gopath/
+syntax: glob
+goname.txt
+gopath.txt
+goroot.txt
+*.pyc
