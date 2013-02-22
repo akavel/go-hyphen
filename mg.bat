@@ -1,5 +1,5 @@
 @echo off
-:: "Make Go" v1.05 2013-01-04
+:: "Make Go" v1.06 2013-02-22
 :: Tool for easy building Go (http://golang.org) programs out of the
 :: main %GOPATH% tree.
 :: SOURCE: https://gist.github.com/3713260
@@ -85,17 +85,21 @@ if errorlevel 1 (
 	goto :end
 )
 
-:: copy subdirs
-for /f "tokens=*" %%f in ('dir /b /ad') do (
-	if not "%%f"=="_gopath" (
-		mkdir %projdir%\"%%f" >nul
-		xcopy /q /e "%%f"\*.* %projdir%\"%%f"\ >nul
+:: copy subdirs, except those starting with underscore '_'
+for /f "tokens=*" %%f in ('dir /b /ad') do call :copydir %%f
+goto :endcopydir
+:copydir
+	set fn=%*
+	if not "%fn:~0,1%"=="_" (
+		mkdir %projdir%\"%fn%" >nul
+		xcopy /q /e "%fn%"\*.* %projdir%\"%fn%"\ >nul
 		if errorlevel 1 (
-			echo cannot xcopy /q /e "%%f"\*.* %projdir%\"%%f"\
+			echo cannot xcopy /q /e "%fn%"\*.* %projdir%\"%fn%"\
 			goto :end
 		)
 	)
-)
+	goto :eof
+:endcopydir
 
 :: copy files
 for %%f in (*.*) do (
