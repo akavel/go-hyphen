@@ -149,17 +149,14 @@ func ParseTexHyph(r io.Reader) (*Hyphenations, error) {
 			// points.
 			t := &h.Tree
 			points := []int{}
-			addzero := true
+			p := 0
 			for _, c := range line {
 				if '0' <= c && c <= '9' {
-					points = append(points, int(c-'0')) // TODO: can these be multidigit? if yes, oops
-					addzero = false
+					p = int(c - '0') // TODO: can these be multidigit? if yes, oops
 					continue
 				}
-				if addzero {
-					points = append(points, 0)
-				}
-				addzero = true
+				points = append(points, p)
+				p = 0
 
 				_, ok := t.Map[c]
 				if !ok {
@@ -167,9 +164,7 @@ func ParseTexHyph(r io.Reader) (*Hyphenations, error) {
 				}
 				t = t.Map[c]
 			}
-			if c := line[len(line)-1]; c < '0' || c > '9' {
-				points = append(points, 0)
-			}
+			points = append(points, p)
 			t.Points = points
 			/*
 				chars = re.sub('[0-9]', '', pattern)
