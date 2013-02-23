@@ -98,7 +98,8 @@ const (
 	_Exceptions
 )
 
-func Parse(r io.Reader) (*Hyphenations, error) {
+// Parse TeX hyphenation patterns file, as published on http://tug.org/tex-hyphen/
+func ParseTexHyph(r io.Reader) (*Hyphenations, error) {
 	b := bufio.NewReader(r)
 	h := &Hyphenations{
 		Tree:       Tree{Map: make(map[byte]*Tree)},
