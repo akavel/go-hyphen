@@ -79,15 +79,17 @@ func Word(word []byte, h Hyphenations) [][]byte {
 	}
 
 	// Examine the points to build the pieces list.
-	pieces := [][]byte{
-		[]byte{},
-	}
+	pieces := [][]byte{}
 	points = points[2:]
-	for i, c := range word { // TODO: refactor
-		pieces[len(pieces)-1] = append(pieces[len(pieces)-1], c)
-		if points[i]%2 != 0 {
-			pieces = append(pieces, []byte{})
+	points[len(word)-1] = -1 // loop terminator
+	for n := 1; len(word) > 0; n++ {
+		if points[n-1]%2 == 0 {
+			continue
 		}
+		pieces = append(pieces, word[:n])
+		word = word[n:]
+		points = points[n:]
+		n = 0
 	}
 	return pieces
 }
