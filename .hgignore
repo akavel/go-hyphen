@@ -1,6 +1,6 @@
 syntax: regexp
-^tmp/
 ^_gopath/
+^_tmp/
 syntax: glob
 goname.txt
 gopath.txt
