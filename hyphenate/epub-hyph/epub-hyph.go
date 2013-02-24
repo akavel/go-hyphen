@@ -15,6 +15,10 @@ import (
 	"unicode"
 )
 
+func wraperr(prefix string, err error) error {
+	return errors.New(prefix + ": " + err.Error())
+}
+
 const (
 	htmlBase = iota
 	htmlTag
@@ -36,6 +40,7 @@ func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 	for {
 		c, sz, err := br.ReadRune()
 		if err == io.EOF {
+			bw.Flush()
 			return nil
 		}
 		if err != nil {
@@ -110,27 +115,53 @@ func hyph(epubpath, hyphpath string) error {
 	// Open EPUB file as zip archive
 	r, err := zip.OpenReader(epubpath)
 	if err != nil {
-		log.Fatal(err)
+		return wraperr("cannot open input epub", err)
 	}
 	defer r.Close()
 
+	// create output EPUB
+	ext := filepath.Ext(epubpath)
+	noext := epubpath[:len(epubpath)-len(ext)]
+	fw, err := os.Create(noext + ".1" + ext)
+	if err != nil {
+		return err
+	}
+	defer fw.Close()
+	w := zip.NewWriter(fw)
+
 	for _, f := range r.File {
-		if filepath.Ext(f.Name) != ".html" {
-			continue
-		}
-		fmt.Printf("Contents of %s:\n", f.Name)
-		rc, err := f.Open()
+		header := f.FileHeader
+		header.CRC32 = 0
+		zipf, err := w.CreateHeader(&header)
 		if err != nil {
-			return err
+			return wraperr("cannot create zip header", err)
 		}
 
-		err = hyphHtml(rc, os.Stdout, hyph)
-		//_, err = io.CopyN(os.Stdout, rc, 68)
-		if err != nil && err != io.EOF {
-			return err
+		rc, err := f.Open()
+		if err != nil {
+			return wraperr("cannot open zip subfile", err)
+		}
+
+		fmt.Println("writing", f.Name)
+		if filepath.Ext(f.Name) == ".html" {
+			err = hyphHtml(rc, zipf, hyph)
+			//_, err = io.CopyN(os.Stdout, rc, 68)
+			if err != nil && err != io.EOF {
+				return wraperr("cannot write hyphenated contents", err)
+			}
+		} else {
+			_, err = io.Copy(zipf, rc)
+			if err != nil {
+				return wraperr("cannot write subfile in zip", err)
+			}
 		}
 		rc.Close()
 		fmt.Println()
+	}
+
+	err = w.Close()
+	if err != nil {
+		return wraperr("cannot close zip", err)
 	}
 
 	_ = hyph
