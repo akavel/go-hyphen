@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"unicode"
 )
 
@@ -24,10 +25,11 @@ const (
 	htmlTag
 	htmlBody
 	htmlTagInBody
+	htmlEntityInBody
 )
 
 var pattBody = regexp.MustCompile(`^\s*([^:]*:\s*)?\b[Bb][Oo][Dd][Yy]\b`) // start simple
-var utf8softhyphen = []byte{0xc2, 0xad}
+var utf8softhyphen = []byte("&shy;")                                      //[]byte{0xc2, 0xad}
 
 func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 	// TODO: skip HTML comments
@@ -36,6 +38,7 @@ func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 	br := bufio.NewReader(r)
 	bw := bufio.NewWriter(w)
 	word := make([]rune, 0, 128)
+	entity := make([]rune, 0, 16)
 	state := htmlBase
 	for {
 		c, sz, err := br.ReadRune()
@@ -74,6 +77,11 @@ func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 				word = append(word, c)
 				break
 			}
+			if c == '&' {
+				state = htmlEntityInBody
+				entity = entity[0:0]
+				break
+			}
 			if c == '<' {
 				state = htmlTagInBody
 			}
@@ -92,6 +100,21 @@ func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 				state = htmlBody
 			}
 			_, err = bw.WriteRune(c)
+		case htmlEntityInBody:
+			if c == ';' {
+				state = htmlBody
+				if string(entity) == "shy" {
+					break
+				}
+				_, err = bw.Write([]byte(string(word)))
+				if err != nil {
+					return err
+				}
+				word = word[0:0]
+				_, err = bw.Write([]byte("&" + string(entity) + ";"))
+				break
+			}
+			entity = append(entity, c)
 		}
 		if err != nil {
 			return err
@@ -143,7 +166,8 @@ func hyph(epubpath, hyphpath string) error {
 		}
 
 		fmt.Println("writing", f.Name)
-		if filepath.Ext(f.Name) == ".html" {
+		ext := strings.ToLower(filepath.Ext(f.Name))
+		if ext == ".html" || ext == ".xhtml" {
 			err = hyphHtml(rc, zipf, hyph)
 			//_, err = io.CopyN(os.Stdout, rc, 68)
 			if err != nil && err != io.EOF {
