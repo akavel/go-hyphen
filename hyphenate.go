@@ -2,7 +2,7 @@
 //
 // MIT licensed, by Mateusz Czapliński, 2013.
 // Based on public domain Python code, by Ned Batchelder, July 2007.
-package hyphenate
+package hyphen
 
 import (
 	"bufio"

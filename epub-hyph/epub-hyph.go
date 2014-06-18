@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/akavel/go-epub/hyphenate"
 	"io"
 	"log"
 	"os"
@@ -14,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	
+	"github.com/akavel/go-hyphen"
 )
 
 func wraperr(prefix string, err error) error {
@@ -31,7 +32,7 @@ const (
 var pattBody = regexp.MustCompile(`^\s*([^:]*:\s*)?\b[Bb][Oo][Dd][Yy]\b`) // start simple
 var utf8softhyphen = []byte("&shy;")                                      //[]byte{0xc2, 0xad}
 
-func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
+func hyphHtml(r io.Reader, w io.Writer, h *hyphen.Hyphenations) error {
 	// TODO: skip HTML comments
 	// TODO: skip SVG etc.; maybe handle only selected elems?... but html5 maybe allows variety?
 	// TODO: in case of problems, try using code.google.com/p/go.net/html parser
@@ -86,7 +87,7 @@ func hyphHtml(r io.Reader, w io.Writer, h *hyphenate.Hyphenations) error {
 				state = htmlTagInBody
 			}
 			if len(word) > 0 {
-				parts := hyphenate.Word([]byte(string(word)), *h)
+				parts := hyphen.Word([]byte(string(word)), *h)
 				newword := bytes.Join(parts, utf8softhyphen)
 				_, err = bw.Write(newword)
 				if err != nil {
@@ -130,7 +131,7 @@ func hyph(epubpath, hyphpath string) error {
 	}
 	defer hh.Close()
 
-	hyph, err := hyphenate.ParseTexHyph(hh)
+	hyph, err := hyphen.ParseTexHyph(hh)
 	if err != nil {
 		return err
 	}

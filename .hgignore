@@ -6,3 +6,4 @@ goname.txt
 gopath.txt
 goroot.txt
 *.pyc
+glob:*.exe 
